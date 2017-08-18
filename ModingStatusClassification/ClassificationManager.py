@@ -67,7 +67,7 @@ class ClassificationManager():
     
     def trainRandomForest(self,pddata):
         train=RandomForestGene()
-        forest=train.datatrainForType(pddata,numoftrees=200)
+        forest=train.datatrainForType(pddata,numoftrees=100)
         with open('ModingStatusClassification/speedEstimation.pkl', 'wb') as f:
             pickle.dump(forest, f)
         print("status classification training finished")
@@ -140,10 +140,10 @@ class ClassificationManager():
         dist1=0
         dist2=0
         for features in featuresTable:
-            pred=self.decideWalkingSpeedWithTowHighestProb([features[0:-1]])
+            pred=self.decideWalkingSpeedStright([features[0:-1]])
             real=int(features[-1])
             dist1=dist1+(real/10.0-pred/10.0)
-            dist2=dist2+np.abs(real/10.0-pred/10.0)
+            dist2=dist2+np.power(real/10.0-pred/10.0,2)
         dist1=dist1/float(len(featuresTable))
         dist2=dist2/float(len(featuresTable))
         

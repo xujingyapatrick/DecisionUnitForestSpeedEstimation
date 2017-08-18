@@ -7,12 +7,11 @@ import random
 import pandas as pd
 import numpy as np
 import pickle
-
+import pylab as pl
 
 class Unit():
     def __init__(self):
         self.columns=[]
-        self.favg=[]
         self.cube=[]
         self.records=[]
 
@@ -20,6 +19,7 @@ class Classifier():
     def __init__(self):
         self.decisionUnits=None
         self.types=None
+        self.featureCount=np.zeros(28)
     
     ##in the dataFrame, features should be float/int, a column called "types" should be included while the values of the types should be String 
     ##typeList should be a list of int types
@@ -73,15 +73,14 @@ class Classifier():
                 for j in unit.columns:
                     record.append(float(dataFrame.loc[rr][j]))
                 unit.records.append(record)
+            averages=[]
             for i in range(0,len(unit.records[0])):
                 ave= sum(row[i] for row in unit.records)
                 ave=ave/len(unit.records)
                 for j in range(0,len(unit.records)):
                     unit.records[j][i]=unit.records[j][i]/ave
-                unit.favg.append(ave)
-                 
-            
-            
+                averages.append(ave)
+                
             for rec1 in unit.records:
                 d2=[]
                 for rec2 in unit.records:
@@ -90,8 +89,12 @@ class Classifier():
                         d3.append(np.abs(rec1[i]-rec2[i]))
                     d2.append(d3)
                 unit.cube.append(d2)
-                
             self.decisionUnits.append(unit)
+            
+            for i in range(0,len(unit.records[0])):
+                for j in range(0,len(unit.records)):
+                    unit.records[j][i]=unit.records[j][i]*averages[i]
+            
             numberOfUnits=numberOfUnits-1
         
         print("Train data finished!")
@@ -105,21 +108,21 @@ class Classifier():
         for unit in self.decisionUnits:
             typePool=[a for a in range(0,len(self.types))]
             while len(typePool)>1:
-                loc=random.randint(0,len(unit.columns)-1)
-#                 print("loc= "+str(loc))
                 ##find max 
                 maxDist=0
                 maxi=0
                 maxj=0
+                maxk=0;
                 for i in typePool:
                     for j in typePool:
-#                         print("i="+str(i)+"  j="+str(j)+"  loc="+str(loc))
-                        if unit.cube[i][j][loc]>=maxDist:
-                            maxDist=unit.cube[i][j][loc]
-                            maxi=i
-                            maxj=j
-                disti=np.abs(unit.records[maxi][loc]-float(features[unit.columns[loc]]))
-                distj=np.abs(unit.records[maxj][loc]-float(features[unit.columns[loc]]))
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
                 if disti>distj:
                     typePool.remove(maxi)
                 else:
@@ -134,6 +137,8 @@ class Classifier():
                 resType=tp
         return int(resType)
 
+
+
     #features should be a list, while returning a Sting, predict the final speed by the speed distribution of decision units    
     def predictWithDistribute(self,features):
         predictTypesDic={}
@@ -143,21 +148,21 @@ class Classifier():
         for unit in self.decisionUnits:
             typePool=[a for a in range(0,len(self.types))]
             while len(typePool)>1:
-                loc=random.randint(0,len(unit.columns)-1)
-#                 print("loc= "+str(loc))
                 ##find max 
                 maxDist=0
                 maxi=0
                 maxj=0
+                maxk=0;
                 for i in typePool:
                     for j in typePool:
-#                         print("i="+str(i)+"  j="+str(j)+"  loc="+str(loc))
-                        if unit.cube[i][j][loc]>=maxDist:
-                            maxDist=unit.cube[i][j][loc]
-                            maxi=i
-                            maxj=j
-                disti=np.abs(unit.records[maxi][loc]-float(features[unit.columns[loc]]))
-                distj=np.abs(unit.records[maxj][loc]-float(features[unit.columns[loc]]))
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
                 if disti>distj:
                     typePool.remove(maxi)
                 else:
@@ -173,25 +178,24 @@ class Classifier():
         predictTypesDic={}
         for tp in self.types:
             predictTypesDic[str(tp)]=0
-        
         for unit in self.decisionUnits:
             typePool=[a for a in range(0,len(self.types))]
             while len(typePool)>1:
-                loc=random.randint(0,len(unit.columns)-1)
-#                 print("loc= "+str(loc))
                 ##find max 
                 maxDist=0
                 maxi=0
                 maxj=0
+                maxk=0;
                 for i in typePool:
                     for j in typePool:
-#                         print("i="+str(i)+"  j="+str(j)+"  loc="+str(loc))
-                        if unit.cube[i][j][loc]>=maxDist:
-                            maxDist=unit.cube[i][j][loc]
-                            maxi=i
-                            maxj=j
-                disti=np.abs(unit.records[maxi][loc]-float(features[unit.columns[loc]]))
-                distj=np.abs(unit.records[maxj][loc]-float(features[unit.columns[loc]]))
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
                 if disti>distj:
                     typePool.remove(maxi)
                 else:
@@ -207,6 +211,149 @@ class Classifier():
                 
         return finalSpeed
 
+    def predictStrightWith500Limit(self,features):
+        predictTypesDic={}
+        for tp in self.types:
+            predictTypesDic[str(tp)]=0
+        count = 0
+        for unit in self.decisionUnits:
+            count = count+1
+            if(count > 500):
+                break
+            typePool=[a for a in range(0,len(self.types))]
+            while len(typePool)>1:
+                ##find max 
+                maxDist=0
+                maxi=0
+                maxj=0
+                maxk=0;
+                for i in typePool:
+                    for j in typePool:
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
+                if disti>distj:
+                    typePool.remove(maxi)
+                else:
+                    typePool.remove(maxj)
+            typeForUnit=self.types[typePool[0]]
+            predictTypesDic[str(typeForUnit)]=predictTypesDic[str(typeForUnit)]+1
+        finalSpeed=0
+        max=0
+        for tp in predictTypesDic:
+            if predictTypesDic[tp]>max:
+                max=predictTypesDic[tp]
+                finalSpeed=int(tp)
+                
+        return finalSpeed
+
+    def getCorrectsForOneRecord(self,features):
+        isCorrect=np.zeros(len(self.decisionUnits))
+        cur=0
+        for unit in self.decisionUnits:
+            typePool=[a for a in range(0,len(self.types))]
+            while len(typePool)>1:
+                ##find max 
+                maxDist=0
+                maxi=0
+                maxj=0
+                maxk=0;
+                for i in typePool:
+                    for j in typePool:
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
+                if disti>distj:
+                    typePool.remove(maxi)
+                else:
+                    typePool.remove(maxj)
+            typeForUnit=self.types[typePool[0]]
+            if str(typeForUnit)== str(features[-1]):
+                isCorrect[cur]=isCorrect[cur]+1
+            cur=cur+1
+            
+        return isCorrect
+
+    def optimizeDecisionUnits(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        correctRate=np.zeros(len(self.decisionUnits))
+        for features in featuresTable:
+            isCorrect=self.getCorrectsForOneRecord(features)
+            for i in range(0,len(isCorrect)):
+                correctRate[i]=correctRate[i]+isCorrect[i]
+        for i in range(0,len(correctRate)):
+            correctRate[i]=correctRate[i]/len(featuresTable)
+#             print(str(i)+":"+str(correctRate[i])+" ")
+        x=range(0,len(correctRate))
+        pl.plot(x,correctRate,'*')
+#         pl.show()
+        return correctRate
+    
+    #we keep the total number of decision units to be 500, if not error will alert
+    def deleteUnusefulDecisionUnits(self, correctRate):
+        print("len(self.decisionUnits): "+ str(len(self.decisionUnits)))
+        for i in range(len(correctRate)-1,-1,-1):
+            if(correctRate[i]<0.3):
+                self.decisionUnits.remove(self.decisionUnits[i])
+        print("len(self.decisionUnits): "+ str(len(self.decisionUnits)))
+
+
+
+    def predictStrightWithFeatureCount(self,features):
+        featureCount=np.zeros(28)
+        predictTypesDic={}
+        for tp in self.types:
+            predictTypesDic[str(tp)]=0
+        
+        for unit in self.decisionUnits:
+            typePool=[a for a in range(0,len(self.types))]
+            while len(typePool)>1:
+                ##find max 
+                maxDist=0
+                maxi=0
+                maxj=0
+                maxk=0;
+                for i in typePool:
+                    for j in typePool:
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
+                if disti>distj:
+                    typePool.remove(maxi)
+                else:
+                    typePool.remove(maxj)
+                featureCount[unit.columns[maxk]]=featureCount[unit.columns[maxk]]+1
+                
+            typeForUnit=self.types[typePool[0]]
+            predictTypesDic[str(typeForUnit)]=predictTypesDic[str(typeForUnit)]+1
+        finalSpeed=0
+        max=0
+        for tp in predictTypesDic:
+            if predictTypesDic[tp]>max:
+                max=predictTypesDic[tp]
+                finalSpeed=int(tp)
+        
+        print(featureCount)
+        for i in range(0,len(featureCount)):
+            self.featureCount[i]=self.featureCount[i]+featureCount[i]
+        return finalSpeed
+
+
     def predictWithTowHighestProb(self,features):
         predictTypesDic={}
         for tp in self.types:
@@ -215,21 +362,21 @@ class Classifier():
         for unit in self.decisionUnits:
             typePool=[a for a in range(0,len(self.types))]
             while len(typePool)>1:
-                loc=random.randint(0,len(unit.columns)-1)
-#                 print("loc= "+str(loc))
                 ##find max 
                 maxDist=0
                 maxi=0
                 maxj=0
+                maxk=0;
                 for i in typePool:
                     for j in typePool:
-#                         print("i="+str(i)+"  j="+str(j)+"  loc="+str(loc))
-                        if unit.cube[i][j][loc]>=maxDist:
-                            maxDist=unit.cube[i][j][loc]
-                            maxi=i
-                            maxj=j
-                disti=np.abs(unit.records[maxi][loc]-float(features[unit.columns[loc]]))
-                distj=np.abs(unit.records[maxj][loc]-float(features[unit.columns[loc]]))
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
                 if disti>distj:
                     typePool.remove(maxi)
                 else:
@@ -281,7 +428,7 @@ class Classifier():
             pred=self.predict(features)
             real=int(features[-1])
             dist1=dist1+(real/10.0-pred/10.0)
-            dist2=dist2+np.abs(real/10.0-pred/10.0)
+            dist2=dist2+np.power(real/10.0-pred/10.0,2)
             testTable[self.types.index(real)][self.types.index(pred)]=testTable[self.types.index(real)][self.types.index(pred)]+1
         distribution=pd.DataFrame(testTable,index=self.types,columns=self.types)
         print("real-predict table is :")
@@ -303,22 +450,17 @@ class Classifier():
         dist1=0
         dist2=0
         for features in featuresTable:
-            pred=self.predictWithTowHighestProb(features)
+            pred=self.predictStrightWith500Limit(features)
             real=int(features[-1])
             dist1=dist1+(real/10.0-pred/10.0)
-            dist2=dist2+np.abs(real/10.0-pred/10.0)
+            dist2=dist2+np.power(real/10.0-pred/10.0,2)
         dist1=dist1/float(len(featuresTable))
         dist2=dist2/float(len(featuresTable))
+#         print("features use frequency:")
+#         print(self.featureCount)
         
         return dist1, dist2
         
-            
-        
-    
-    
-    
-    
-    
     def save(self):
         with open('speedEstimater.pkl', 'wb') as f:
             pickle.dump(self, f)
