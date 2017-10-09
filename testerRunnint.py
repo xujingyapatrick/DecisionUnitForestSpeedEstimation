@@ -10,8 +10,8 @@ from time import sleep
 import numpy as np
 
 dataProcessor=DataProcessor()
-a=dataProcessor.getWalkingData()
-# a=dataProcessor.getRunningData()
+# a=dataProcessor.getWalkingData()
+a=dataProcessor.getRunningData()
 
 # a=dataProcessor.dropLowFrequencyFeatures(a)
 # b,c,d=dataProcessor.splitDataToThree(a)
@@ -26,10 +26,11 @@ cs=Classifier()
 sleep(1)
 cm=ClassificationManager()
 
-walkingTypes=[10,15,20,25,30,35]
+walkingTypes=[25,30,35,40,45,50]
 cs.trainData(b, walkingTypes, 8, numberOfUnits=800)
 cm.trainRandomForest(b)
-distNew1, distNew2=cs.testClassificationByDistributeAvarageAndPlot(d)
+# distNew1, distNew2=cs.testClassificationByDistributeAvarageAndPlot(d)
+distNew1, distNew2=cs.testClassificationByDistributeAvarageAndPlotForRunning(d)
 print("Before Decision Unit Opt: distNew2= "+str(np.sqrt(distNew2)))
 # cs.getTestResultRMSValuesForEachSpeed(d)
 # cs.plotAverageSpeedsForAllDecisionUnits(d)

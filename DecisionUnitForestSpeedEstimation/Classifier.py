@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import pylab as pl
+from numpy.lib.type_check import real
 
 class Unit():
     def __init__(self):
@@ -252,6 +253,117 @@ class Classifier():
                 
         return finalSpeed
 
+
+    def getPredVsRealWith500Limit(self,features):
+        predictTypesDic={}
+        for tp in self.types:
+            predictTypesDic[str(tp)]=0
+        count = 0
+        pred=[]
+        real=[]
+        for unit in self.decisionUnits:
+            count = count+1
+            if(count > 500):
+                break
+            typePool=[a for a in range(0,len(self.types))]
+            while len(typePool)>1:
+                ##find max 
+                maxDist=0
+                maxi=0
+                maxj=0
+                maxk=0;
+                for i in typePool:
+                    for j in typePool:
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
+                if disti>distj:
+                    typePool.remove(maxi)
+                else:
+                    typePool.remove(maxj)
+            pred.append(int(self.types[typePool[0]])/10.0)
+            real.append(int(features[-1])/10.0)
+        return [real, pred]
+
+    def plotPredVsRealWith500LimitForAllTestData(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        for features in featuresTable:
+            comp=self.getPredVsRealWith500Limit(features)
+            pl.plot(comp[0],comp[1],'*')
+        
+        pl.xlabel("Real Speed")
+        pl.ylabel("Estimated Speed")
+        pl.show()
+        return  
+
+    def plotAverageSpeedsForAllDecisionUnits(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        avgs = {}
+        countSpeeds={}
+        for i in range(0,6):
+            key = str(1.0+i*0.5)
+            avgs[key] = np.zeros([2,500])
+            countSpeeds[key] = 0
+            for j in range(0,500):
+                avgs[key][1][j] = 1.0+i*0.5
+                
+        for features in featuresTable:
+            comp=self.getPredVsRealWith500Limit(features)
+            key = str(comp[0][0])
+            countSpeeds[key] = countSpeeds[key] + 1
+            for i in range(0, 500):
+                avgs[key][0][i] = avgs[key][0][i] + comp[1][i]
+                
+#             pl.plot(comp[0],comp[1],'*')
+
+        for key in avgs:
+            for i in range(0,500):
+                avgs[key][0][i] = avgs[key][0][i]/countSpeeds[key]
+            pl.plot(avgs[key][1],avgs[key][0],'*')
+        
+        pl.xlabel("Real Speed")
+        pl.ylabel("Estimated Speed")
+        pl.show()
+        return  
+
+
+    def plotAccuracyInEachSpeedsForAllDecisionUnits(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        avgs = {}
+        countSpeeds={}
+        for i in range(0,6):
+            key = str(1.0+i*0.5)
+            avgs[key] = np.zeros([2,500])
+            countSpeeds[key] = 0
+            for j in range(0,500):
+                avgs[key][1][j] = 1.0+i*0.5
+                
+        for features in featuresTable:
+            comp=self.getPredVsRealWith500Limit(features)
+            key = str(comp[0][0])
+            countSpeeds[key] = countSpeeds[key] + 1
+            for i in range(0, 500):
+                if np.abs(comp[0][i] - comp[1][i]) < 0.1:
+                    avgs[key][0][i] = avgs[key][0][i] + 1
+                
+#             pl.plot(comp[0],comp[1],'*')
+
+        for key in avgs:
+            for i in range(0,500):
+                avgs[key][0][i] = avgs[key][0][i]/countSpeeds[key]
+            pl.plot(avgs[key][1],avgs[key][0]*100,'*')
+        
+        pl.xlabel("Real Speed (miles/h)")
+        pl.ylabel("Accuracy (%)")
+        pl.show()
+        return  
+
+
     def getCorrectsForOneRecord(self,features):
         isCorrect=np.zeros(len(self.decisionUnits))
         cur=0
@@ -284,6 +396,7 @@ class Classifier():
             
         return isCorrect
 
+
     def optimizeDecisionUnits(self, featuresFrame):
         featuresTable=list(featuresFrame.values)
         correctRate=np.zeros(len(self.decisionUnits))
@@ -306,6 +419,63 @@ class Classifier():
             if(correctRate[i]<0.3):
                 self.decisionUnits.remove(self.decisionUnits[i])
         print("len(self.decisionUnits): "+ str(len(self.decisionUnits)))
+
+#the following3 function s are used to to filter bad decision units by measuring MSE
+    def getMSRsForOneRecord(self,features):
+        oneMsr=np.zeros(len(self.decisionUnits))
+        cur=0
+        for unit in self.decisionUnits:
+            typePool=[a for a in range(0,len(self.types))]
+            while len(typePool)>1:
+                ##find max 
+                maxDist=0
+                maxi=0
+                maxj=0
+                maxk=0;
+                for i in typePool:
+                    for j in typePool:
+                        for k in range(0,len(unit.columns)):
+                            if unit.cube[i][j][k]>=maxDist:
+                                maxDist=unit.cube[i][j][k]
+                                maxi=i
+                                maxj=j
+                                maxk=k
+                disti=np.abs(unit.records[maxi][maxk]-float(features[unit.columns[maxk]]))
+                distj=np.abs(unit.records[maxj][maxk]-float(features[unit.columns[maxk]]))
+                if disti>distj:
+                    typePool.remove(maxi)
+                else:
+                    typePool.remove(maxj)
+            typeForUnit=self.types[typePool[0]]
+            oneMsr[cur]=np.power(float(int(typeForUnit)/10.0-int(features[-1])/10.0),2)
+            cur=cur+1
+            
+        return oneMsr
+
+    def getAllMSRsForDecisionUnits(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        allMsrs=np.zeros(len(self.decisionUnits))
+        for features in featuresTable:
+            oneMsr=self.getMSRsForOneRecord(features)
+            for i in range(0,len(oneMsr)):
+                allMsrs[i]=allMsrs[i]+oneMsr[i]
+        for i in range(0,len(allMsrs)):
+            allMsrs[i]=allMsrs[i]/len(featuresTable)
+#             print(str(i)+":"+str(allMsrs[i])+" ")
+        x=range(0,len(allMsrs))
+        pl.plot(x,allMsrs,'*')
+#         pl.show()
+        return allMsrs
+    
+    #we keep the total number of decision units to be 500. averageMsr comes from the test result of original decision units.
+    def deleteUnusefulDecisionUnitsByMsr(self, allMsrs, averageMsr):
+        print("len(self.decisionUnits): "+ str(len(self.decisionUnits)))
+        for i in range(len(allMsrs)-1,-1,-1):
+            #if the msr for one decision unit is larger than the average, we will drop it.
+            if(allMsrs[i]>2*averageMsr):
+                self.decisionUnits.remove(self.decisionUnits[i])
+        print("len(self.decisionUnits): "+ str(len(self.decisionUnits)))
+
 
 
 
@@ -455,11 +625,74 @@ class Classifier():
             dist1=dist1+(real/10.0-pred/10.0)
             dist2=dist2+np.power(real/10.0-pred/10.0,2)
         dist1=dist1/float(len(featuresTable))
-        dist2=dist2/float(len(featuresTable))
+        dist2=dist2/float(len(featuresTable))  
+        return dist1, dist2  
+
+    def testClassificationByDistributeAvarageAndPlot(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        dist1=0
+        dist2=0
+        preds = []
+        reals = []
+        for features in featuresTable:
+            pred=self.predictWithDistribute(features)
+            real=int(features[-1])
+            reals.append(real/10.0)
+            preds.append(pred/10.0)
+            dist1=dist1+(real/10.0-pred/10.0)
+            dist2=dist2+np.power(real/10.0-pred/10.0,2)
+        dist1=dist1/float(len(featuresTable))
+        dist2=dist2/float(len(featuresTable))  
+        pl.plot(reals, preds, "*")
+        pl.title("Walking speed prediction")
+        pl.xlabel("real speed (mile/h)")
+        pl.ylabel("predict speed (mile/h)")
+        pl.show()
+        return dist1, dist2  
+
+    def testClassificationByDistributeAvarageAndPlotForRunning(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        dist1=0
+        dist2=0
+        preds = []
+        reals = []
+        for features in featuresTable:
+            pred=self.predictWithDistribute(features)
+            real=int(features[-1])
+            reals.append(real/10.0)
+            preds.append(pred/10.0)
+            dist1=dist1+(real/10.0-pred/10.0)
+            dist2=dist2+np.power(real/10.0-pred/10.0,2)
+        dist1=dist1/float(len(featuresTable))
+        dist2=dist2/float(len(featuresTable))  
+        pl.plot(reals, preds, "*")
+        pl.title("Running speed prediction")
+        pl.xlabel("real speed (mile/h)")
+        pl.ylabel("predict speed (mile/h)")
+        pl.show()
+        return dist1, dist2  
+
+
+
+    def getTestResultRMSValuesForEachSpeed(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        rms={}
+        counts = {}
+        for features in featuresTable:
+            pred=self.predictStright(features)
+            real=int(features[-1])
+            if real in rms:
+                rms[real] = rms[real] + np.power((real/10.0-pred/10.0), 2)
+                counts[real] = counts[real]+1
+            else:
+                rms[real] = np.power((real/10.0-pred/10.0), 2)
+                counts[real] = 1
+        for real in rms:
+            rms[real] = np.sqrt(rms[real] / counts[real]) / (real/10.0)
+        print(rms)
+        return rms
 #         print("features use frequency:")
 #         print(self.featureCount)
-        
-        return dist1, dist2
         
     def save(self):
         with open('speedEstimater.pkl', 'wb') as f:

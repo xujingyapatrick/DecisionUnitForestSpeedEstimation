@@ -20,6 +20,6 @@ walkingTypes=[10,15,20,25,30,35]
 cs.trainData(b, walkingTypes, 8, numberOfUnits=200)
 cm.trainRandomForest(b)
 
-distNew1, distNew2=cs.testClassificationForDifferentPredict(c)
+distNew1, distNew2=cs.testClassificationByDistributeAvarageAndPlot(c)
 distCla1, distCla2=cm.testClassification(c)
 

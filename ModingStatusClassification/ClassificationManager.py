@@ -149,6 +149,24 @@ class ClassificationManager():
         
         return dist1, dist2
         
+    def getTestResultRMSValuesForEachSpeed(self, featuresFrame):
+        featuresTable=list(featuresFrame.values)
+        rms={}
+        counts = {}
+        for features in featuresTable:
+            pred=self.decideWalkingSpeedStright([features[0:-1]])
+            real=int(features[-1])
+            if real in rms:
+                rms[real] = rms[real] + np.power((real/10.0-pred/10.0), 2)
+                counts[real] = counts[real]+1
+            else:
+                rms[real] = np.power((real/10.0-pred/10.0), 2)
+                counts[real] = 1
+        for real in rms:
+            rms[real] = np.sqrt(rms[real] / counts[real]) / (real/10.0)
+        print(rms)
+        return rms
+                
         
         
         
